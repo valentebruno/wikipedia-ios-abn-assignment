@@ -11,7 +11,6 @@ enum LocationsRepositoryError: Error, Equatable {
     case httpStatus(Int, URL)
     case decodingFailure(URL)
     case emptyLocations(URL)
-    case noReachableEndpoint([URL])
 }
 
 extension LocationsRepositoryError: LocalizedError {
@@ -25,44 +24,36 @@ extension LocationsRepositoryError: LocalizedError {
             return "Could not decode locations from the service response."
         case .emptyLocations:
             return "The service returned no locations."
-        case .noReachableEndpoint:
-            return "Could not reach any configured locations endpoint."
         }
     }
 }
 
 actor RemoteLocationsRepository: LocationsRepository {
-    static let assignmentPrimaryURL = URL(string: "https://raw.githubusercontent.com/abnamrocoesd/assignment-ios/main/locations.json")!
-    static let assignmentFallbackURL = URL(string: "https://raw.githubusercontent.com/abnamrocoesd/assignmentios/main/locations.json")!
+    static let assignmentURL = URL(string: "https://raw.githubusercontent.com/abnamrocoesd/assignment-ios/main/locations.json")!
+
+    private static var defaultSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }()
 
     private let session: URLSession
     private let decoder: JSONDecoder
-    private let endpoints: [URL]
+    private let endpoint: URL
 
     init(
-        session: URLSession = .shared,
+        session: URLSession? = nil,
         decoder: JSONDecoder = JSONDecoder(),
-        endpoints: [URL] = [assignmentPrimaryURL, assignmentFallbackURL]
+        endpoint: URL = assignmentURL
     ) {
-        self.session = session
+        self.session = session ?? RemoteLocationsRepository.defaultSession
         self.decoder = decoder
-        self.endpoints = endpoints
+        self.endpoint = endpoint
     }
 
     func fetchLocations() async throws -> [LocationItem] {
-        var lastError: Error?
-        for endpoint in endpoints {
-            do {
-                return try await fetchLocations(at: endpoint)
-            } catch {
-                lastError = error
-            }
-        }
-
-        if let lastError {
-            throw lastError
-        }
-        throw LocationsRepositoryError.noReachableEndpoint(endpoints)
+        try await fetchLocations(at: endpoint)
     }
 
     private func fetchLocations(at endpoint: URL) async throws -> [LocationItem] {

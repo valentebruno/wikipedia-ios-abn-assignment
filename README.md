@@ -54,13 +54,19 @@ cp -r /path/to/this-repo/wikipedia-ios/WikipediaUnitTests/Code/* WikipediaUnitTe
 open Wikipedia.xcodeproj
 ```
 
-For PlacesLauncher you need [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+The PlacesLauncher Xcode project is committed directly so you can open it right away:
+
+```bash
+cd PlacesLauncher
+open PlacesLauncher.xcodeproj
+```
+
+If you ever need to regenerate it from `project.yml`, install [XcodeGen](https://github.com/yonaskolb/XcodeGen) and run:
 
 ```bash
 brew install xcodegen
 cd PlacesLauncher
 xcodegen generate
-open PlacesLauncher.xcodeproj
 ```
 
 Run Wikipedia first (so it registers the URL scheme), then run PlacesLauncher on the **same simulator**. Tap a location — Wikipedia should jump to Places at that coordinate.
@@ -73,10 +79,10 @@ For a complete walkthrough of the changes and the reasoning behind them, see [`w
 
 | Requirement | Notes |
 |---|---|
-| Fetch locations from the JSON endpoint | `RemoteLocationsRepository` actor fetches from the ABN AMRO endpoint with a 15 s timeout. Decodes the JSON, falls back gracefully on network error. |
-| Tap a location → Wikipedia opens Places at that coordinate | `WikipediaDeepLinkBuilder` constructs `wikipedia://places?lat=…&lon=…`. Both cold launch and background-resume paths handled in `SceneDelegate`. |
+| Fetch locations from the JSON endpoint | `RemoteLocationsRepository` actor fetches from the single ABN AMRO endpoint with a 15 s request / 30 s resource timeout. Decodes the JSON and surfaces errors clearly rather than silently retrying a broken fallback. |
+| Tap a location → Wikipedia opens Places at that coordinate | `WikipediaDeepLinkBuilder` constructs `wikipedia://places?lat=…&lon=…`. Both cold launch and background-resume paths are handled correctly. |
 | Custom coordinate entry | Coordinate text field in PlacesLauncher. `CoordinateParser` handles comma as decimal separator (European keyboards), validates range before opening. |
-| SwiftUI for the Places app | PlacesLauncher is built entirely in SwiftUI. No UIKit, no storyboards. Generated with XcodeGen so there is no committed `.xcodeproj`. |
+| SwiftUI for the Places app | PlacesLauncher is built entirely in SwiftUI. No UIKit, no storyboards. The `.xcodeproj` is committed so reviewers can open it directly without installing XcodeGen. |
 | README | This file, plus `wikipedia-ios/ABN_ASSIGNMENT_README.md` with a detailed walkthrough of all Wikipedia changes and the decisions behind them. |
 | Unit tests | 16 tests in PlacesLauncher covering JSON decoding, deep link construction, coordinate parsing, ViewModel state transitions, geocoding, and error handling. Additional Objective-C tests in `NSUserActivity+WMFExtensionsTest.m` covering the Wikipedia URL parsing changes. |
 | Swift Concurrency | ViewModel is `@MainActor` — every `@Published` update runs on the main thread with no manual dispatch calls. Repository is an `actor`. All network calls use `async/await`. Views use `.task {}` so work cancels automatically when the view disappears. |
