@@ -1,0 +1,61 @@
+name: PlacesLauncher
+options:
+  minimumXcodeGenVersion: 2.41.0
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+targets:
+  PlacesLauncher:
+    type: application
+    platform: iOS
+    sources:
+      - path: PlacesLauncher
+    info:
+      path: PlacesLauncher/Info.plist
+      properties:
+        CFBundleDisplayName: PlacesLauncher
+        UILaunchScreen: {}
+        LSApplicationQueriesSchemes:
+          - wikipedia
+          - wikipedia-official
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abnamro.assignment.PlacesLauncher
+        PRODUCT_NAME: PlacesLauncher
+        MARKETING_VERSION: 1.0
+        CURRENT_PROJECT_VERSION: 1
+        GENERATE_INFOPLIST_FILE: NO
+  PlacesLauncherTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PlacesLauncherTests
+    dependencies:
+      - target: PlacesLauncher
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abnamro.assignment.PlacesLauncherTests
+        GENERATE_INFOPLIST_FILE: YES
+  PlacesLauncherUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PlacesLauncherUITests
+    dependencies:
+      - target: PlacesLauncher
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abnamro.assignment.PlacesLauncherUITests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  PlacesLauncher:
+    build:
+      targets:
+        PlacesLauncher: all
+        PlacesLauncherTests: [test]
+        PlacesLauncherUITests: [test]
+    test:
+      targets:
+        - PlacesLauncherTests
+        - PlacesLauncherUITests
