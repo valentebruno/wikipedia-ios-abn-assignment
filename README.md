@@ -71,16 +71,16 @@ For a complete walkthrough of the changes and the reasoning behind them, see [`w
 
 ## Assignment requirements checklist
 
-| Requirement | Status |
+| Requirement | Notes |
 |---|---|
-| Fetch locations from the assignment JSON endpoint | ✅ |
-| Tap a location → Wikipedia opens Places at that coordinate | ✅ |
-| Custom coordinate entry | ✅ |
-| SwiftUI for the Places app | ✅ |
-| README | ✅ |
-| Unit tests | ✅ 16 in PlacesLauncher + new Wikipedia tests |
-| Swift Concurrency | ✅ `@MainActor`, `actor`, `async/await`, `.task` |
-| Accessibility | ✅ Labels and hints on all interactive elements, custom settings panel |
+| Fetch locations from the JSON endpoint | `RemoteLocationsRepository` actor fetches from the ABN AMRO endpoint with a 15 s timeout. Decodes the JSON, falls back gracefully on network error. |
+| Tap a location → Wikipedia opens Places at that coordinate | `WikipediaDeepLinkBuilder` constructs `wikipedia://places?lat=…&lon=…`. Both cold launch and background-resume paths handled in `SceneDelegate`. |
+| Custom coordinate entry | Coordinate text field in PlacesLauncher. `CoordinateParser` handles comma as decimal separator (European keyboards), validates range before opening. |
+| SwiftUI for the Places app | PlacesLauncher is built entirely in SwiftUI. No UIKit, no storyboards. Generated with XcodeGen so there is no committed `.xcodeproj`. |
+| README | This file, plus `wikipedia-ios/ABN_ASSIGNMENT_README.md` with a detailed walkthrough of all Wikipedia changes and the decisions behind them. |
+| Unit tests | 16 tests in PlacesLauncher covering JSON decoding, deep link construction, coordinate parsing, ViewModel state transitions, geocoding, and error handling. Additional Objective-C tests in `NSUserActivity+WMFExtensionsTest.m` covering the Wikipedia URL parsing changes. |
+| Swift Concurrency | ViewModel is `@MainActor` — every `@Published` update runs on the main thread with no manual dispatch calls. Repository is an `actor`. All network calls use `async/await`. Views use `.task {}` so work cancels automatically when the view disappears. |
+| Accessibility | Every button, list row, text field, and loading/error state has an `accessibilityLabel` and `accessibilityHint`. An in-app settings panel lets the user enable larger text, higher contrast, reduced motion, and VoiceOver coordinate reading — all persisted via `@AppStorage`. |
 
 ---
 
