@@ -104,17 +104,15 @@ The Wikipedia app changes are intentionally minimal to reduce integration risk.
 
 ## Requirements
 
-| Requirement | Notes |
-|||
-| Fetch locations | `RemoteLocationsRepository` actor with timeouts and explicit error handling |
-| Open Wikipedia on tap | `WikipediaDeepLinkBuilder` + lifecycle-safe routing |
+| Requirement | Implementation |
+|---|---|
+| Fetch locations | `RemoteLocationsRepository` (`actor`) with timeouts and explicit error handling |
+| Open Wikipedia on tap | `WikipediaDeepLinkBuilder` with lifecycle-safe deep link handling |
 | Custom coordinates | `CoordinateParser` supports comma decimal separator and validates range |
-| SwiftUI | No UIKit or storyboards |
-| Unit tests | 16 PlacesLauncher tests + Wikipedia parsing tests |
-| Concurrency | `@MainActor`, `actor`, async/await |
-| Accessibility | Full support + persistent user settings |
-
- 
+| SwiftUI | Fully SwiftUI (no UIKit, no storyboards) |
+| Unit tests | 16 PlacesLauncher tests + Wikipedia URL-parsing tests |
+| Concurrency | `@MainActor`, `actor`, `async/await` |
+| Accessibility | Full support with persistent user settings (`@AppStorage`) | 
 ## Tests
 
 ### PlacesLauncher — 16 unit tests
