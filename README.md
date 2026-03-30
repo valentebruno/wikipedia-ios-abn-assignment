@@ -6,9 +6,9 @@ It also supports:
 - custom coordinate input
 - place search via geocoding
 
-The implementation focuses on correctness, lifecycle robustness, and safe integration with an existing large codebase.
+The implementation focuses on correctness, lifecycle robustness, and safe integration with an existing large codebase, particularly around deep linking and coordinate handling.
 
----
+
 
 ## Repository structure
 
@@ -33,12 +33,14 @@ The implementation focuses on correctness, lifecycle robustness, and safe integr
         └── NSUserActivity+WMFExtensionsTest.m URL parsing tests
 ```
 
-The `wikipedia-ios` folder contains only the modified files to keep the change set small and reviewable.
+The `wikipedia-ios` folder contains only the modified files to keep the diff minimal and reviewable.
+
+Changes were intentionally limited to avoid impacting unrelated areas of the codebase and to reduce integration risk.
 
 Full source: https://github.com/wikimedia/wikipedia-ios  
 → clone it, replace the files, and build.
 
----
+
 
 ## How it works
 
@@ -63,7 +65,7 @@ Invalid values (non-numeric, out-of-range, incomplete pairs) are rejected before
 
 PlacesLauncher constructs the URL and delegates execution to the OS.
 
----
+
 
 ## Running it
 
@@ -90,7 +92,7 @@ Run Wikipedia first (to register the URL scheme), then launch PlacesLauncher on 
 
 Tapping a location will open Wikipedia directly on the Places tab at the selected coordinate.
 
----
+
 
 ## Architecture decisions
 
@@ -103,28 +105,29 @@ PlacesLauncher follows a lightweight MVVM architecture focused on separation of 
 
 The Wikipedia app changes are intentionally minimal to reduce integration risk.
 
----
+
 
 ## Requirements
 
 ### Core functionality
 
 | Requirement | Implementation |
-|---|---|
+|||
 | Fetch locations | `RemoteLocationsRepository` (`actor`) with timeouts and explicit error handling |
 | Open Wikipedia on tap | `WikipediaDeepLinkBuilder` with lifecycle-safe routing (cold start + background) |
 | Custom coordinates | `CoordinateParser` with validation and European format support |
+| Deep link parsing | Extended existing `wikipedia://places` route to support coordinate parameters |
 
 ### Architecture & quality
 
 | Requirement | Implementation |
-|---|---|
+|||
 | SwiftUI | Fully SwiftUI (no UIKit, no storyboards) |
 | Concurrency | `@MainActor`, `actor`, `async/await` |
 | Unit tests | 16 PlacesLauncher tests + Wikipedia parsing tests |
 | Accessibility | Full support with persistent settings (`@AppStorage`) |
 
----
+
 
 ## Tests
 
@@ -147,7 +150,7 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
----
+
 
 ### Wikipedia — URL parsing tests
 
@@ -166,7 +169,7 @@ xcodebuild test \
   -only-testing:WikipediaUnitTests/NSUserActivity_WMFExtensions_wmf_activityForWikipediaScheme_Test
 ```
 
----
+
 
 ## Accessibility
 
@@ -187,7 +190,7 @@ In-app settings:
 
 All preferences persist via `@AppStorage`.
 
----
+
 
 ## Notable implementation details
 
@@ -198,7 +201,7 @@ All preferences persist via `@AppStorage`.
 
 Both paths converge to a single handler, ensuring consistent behavior.
 
----
+
 
 ### GPS override prevention
 
@@ -211,7 +214,7 @@ This is explicitly disabled for deep links:
 
 This behavior is deterministic by design.
 
----
+
 
 ### Coordinate validation
 
@@ -222,8 +225,15 @@ Validation happens in two independent layers:
 
 This prevents invalid data from propagating silently.
 
----
+ 
+## Key challenges
 
+- Ensuring deep links behave correctly across cold start and background states  
+- Preventing GPS updates from overriding deep-linked coordinates  
+- Handling malformed or partial coordinate inputs safely  
+- Supporting multiple coordinate formats and parameter names  
+
+ 
 ## Trade-offs
 
 - Chose MVVM over heavier architectures to keep scope focused  
@@ -231,7 +241,7 @@ This prevents invalid data from propagating silently.
 - Limited changes to Wikipedia to reduce regression risk  
 - No UI tests due to time constraints (unit tests prioritized)  
 
----
+
 
 ## How to evaluate this project
 
@@ -243,7 +253,16 @@ Focus on:
 - test coverage of edge cases  
 - accessibility completeness  
 
----
+
+
+## How to review quickly
+
+- Open PlacesLauncher and tap any location  
+- Verify Wikipedia opens on the correct coordinate  
+- Try invalid inputs (e.g. out-of-range or malformed coordinates)  
+- Run unit tests for edge case coverage  
+
+
 
 ## Final notes
 
