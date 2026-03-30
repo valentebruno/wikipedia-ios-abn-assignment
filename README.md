@@ -8,7 +8,7 @@ It also supports:
 
 The implementation focuses on correctness, lifecycle robustness, and safe integration with an existing large codebase.
 
- 
+---
 
 ## Repository structure
 
@@ -38,7 +38,7 @@ The `wikipedia-ios` folder contains only the modified files to keep the change s
 Full source: https://github.com/wikimedia/wikipedia-ios  
 → clone it, replace the files, and build.
 
- 
+---
 
 ## How it works
 
@@ -63,7 +63,7 @@ Invalid values (non-numeric, out-of-range, incomplete pairs) are rejected before
 
 PlacesLauncher constructs the URL and delegates execution to the OS.
 
- 
+---
 
 ## Running it
 
@@ -86,12 +86,15 @@ cd PlacesLauncher
 open PlacesLauncher.xcodeproj
 ```
 
-Run Wikipedia first (to register the URL scheme), then run PlacesLauncher on the same simulator.
+Run Wikipedia first (to register the URL scheme), then launch PlacesLauncher on the same simulator.
 
- 
+Tapping a location will open Wikipedia directly on the Places tab at the selected coordinate.
+
+---
+
 ## Architecture decisions
 
-PlacesLauncher follows a lightweight MVVM approach:
+PlacesLauncher follows a lightweight MVVM architecture focused on separation of concerns and testability:
 
 - `@MainActor` ViewModels ensure UI thread safety  
 - Business logic lives in Services (pure Swift, testable)  
@@ -100,24 +103,35 @@ PlacesLauncher follows a lightweight MVVM approach:
 
 The Wikipedia app changes are intentionally minimal to reduce integration risk.
 
- 
+---
 
 ## Requirements
+
+### Core functionality
 
 | Requirement | Implementation |
 |---|---|
 | Fetch locations | `RemoteLocationsRepository` (`actor`) with timeouts and explicit error handling |
-| Open Wikipedia on tap | `WikipediaDeepLinkBuilder` with lifecycle-safe deep link handling |
-| Custom coordinates | `CoordinateParser` supports comma decimal separator and validates range |
+| Open Wikipedia on tap | `WikipediaDeepLinkBuilder` with lifecycle-safe routing (cold start + background) |
+| Custom coordinates | `CoordinateParser` with validation and European format support |
+
+### Architecture & quality
+
+| Requirement | Implementation |
+|---|---|
 | SwiftUI | Fully SwiftUI (no UIKit, no storyboards) |
-| Unit tests | 16 PlacesLauncher tests + Wikipedia URL-parsing tests |
 | Concurrency | `@MainActor`, `actor`, `async/await` |
-| Accessibility | Full support with persistent user settings (`@AppStorage`) | 
+| Unit tests | 16 PlacesLauncher tests + Wikipedia parsing tests |
+| Accessibility | Full support with persistent settings (`@AppStorage`) |
+
+---
+
 ## Tests
 
 ### PlacesLauncher — 16 unit tests
 
-Covers:
+Covers core business logic and edge cases:
+
 - JSON decoding  
 - deep link construction  
 - coordinate parsing  
@@ -133,11 +147,12 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
- 
+---
 
 ### Wikipedia — URL parsing tests
 
 Covers:
+
 - multiple parameter formats  
 - invalid values  
 - missing coordinate pairs  
@@ -151,11 +166,11 @@ xcodebuild test \
   -only-testing:WikipediaUnitTests/NSUserActivity_WMFExtensions_wmf_activityForWikipediaScheme_Test
 ```
 
-
+---
 
 ## Accessibility
 
-Every interactive element includes:
+Accessibility is treated as a first-class concern:
 
 - `accessibilityLabel`  
 - `accessibilityHint`  
@@ -172,7 +187,7 @@ In-app settings:
 
 All preferences persist via `@AppStorage`.
 
-
+---
 
 ## Notable implementation details
 
@@ -183,7 +198,7 @@ All preferences persist via `@AppStorage`.
 
 Both paths converge to a single handler, ensuring consistent behavior.
 
-
+---
 
 ### GPS override prevention
 
@@ -196,7 +211,7 @@ This is explicitly disabled for deep links:
 
 This behavior is deterministic by design.
 
-
+---
 
 ### Coordinate validation
 
@@ -207,7 +222,7 @@ Validation happens in two independent layers:
 
 This prevents invalid data from propagating silently.
 
-
+---
 
 ## Trade-offs
 
@@ -216,7 +231,7 @@ This prevents invalid data from propagating silently.
 - Limited changes to Wikipedia to reduce regression risk  
 - No UI tests due to time constraints (unit tests prioritized)  
 
-
+---
 
 ## How to evaluate this project
 
@@ -228,7 +243,7 @@ Focus on:
 - test coverage of edge cases  
 - accessibility completeness  
 
-
+---
 
 ## Final notes
 
