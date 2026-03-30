@@ -1,42 +1,73 @@
 # ABN AMRO iOS Assignment — Bruno Valente
 
-PlacesLauncher is a SwiftUI app that fetches a list of locations and, on tap, opens Wikipedia directly on its Places tab centred on that coordinate — not the user's current GPS position. The user can also enter a custom coordinate or search for any place by name.
+PlacesLauncher is a SwiftUI app that fetches a list of locations and opens Wikipedia directly on its *Places* tab centered on a selected coordinate — not the user’s GPS position.
 
----
+It also supports:
+- custom coordinate input
+- place search via geocoding
+
+The implementation focuses on correctness, lifecycle robustness, and safe integration with an existing large codebase.
+
+ 
 
 ## Repository structure
 
 ```
-PlacesLauncher/                       SwiftUI app (full Xcode project)
-wikipedia-ios/
-  ABN_ASSIGNMENT_README.md            detailed walkthrough of every change
-  Wikipedia/Code/
-    NSUserActivity+WMFExtensions.h/m  coordinate parsing from the URL scheme
-    WMFAppViewController.m            deep link routing to Places
-    PlacesViewController.swift        showCoordinate() and GPS-race fix
-  WikipediaUnitTests/Code/
-    NSUserActivity+WMFExtensionsTest.m  new URL-parsing tests
+├── PlacesLauncher/                       SwiftUI app (full Xcode project)
+│   ├── PlacesLauncher.xcodeproj
+│   └── PlacesLauncher/
+│       ├── App/
+│       ├── Models/
+│       ├── Services/                    deep link builder, coordinate parser, geocoder
+│       ├── ViewModels/                  @MainActor, async/await
+│       ├── Views/                       SwiftUI + accessibility support
+│       └── PlacesLauncherTests/         16 unit tests
+│
+└── wikipedia-ios/                       only modified files (minimal diff)
+    ├── ABN_ASSIGNMENT_README.md         detailed technical walkthrough
+    ├── Wikipedia/Code/
+    │   ├── NSUserActivity+WMFExtensions.h/m   coordinate parsing
+    │   ├── WMFAppViewController.m             deep link routing
+    │   └── PlacesViewController.swift         showCoordinate() + GPS handling
+    └── WikipediaUnitTests/Code/
+        └── NSUserActivity+WMFExtensionsTest.m URL parsing tests
 ```
 
-The `wikipedia-ios` folder contains only the files that were changed. The full source is at [github.com/wikimedia/wikipedia-ios](https://github.com/wikimedia/wikipedia-ios) — clone it, drop these files in, and it builds.
+The `wikipedia-ios` folder contains only the modified files to keep the change set small and reviewable.
 
----
+Full source: https://github.com/wikimedia/wikipedia-ios  
+→ clone it, replace the files, and build.
+
+ 
 
 ## How it works
 
-Wikipedia already had a `wikipedia://places` route for opening Places from an article URL. This assignment extends it to accept raw coordinates:
+Wikipedia already supports:
+
+```
+wikipedia://places
+```
+
+This implementation extends it to accept coordinates:
 
 ```
 wikipedia://places?lat=52.3676&lon=4.9041
 ```
 
-PlacesLauncher builds that URL and hands it to the OS. Both `lat`/`lon` and the longer `latitude`/`longitude`/`lng`/`long` forms are accepted. Out-of-range and non-numeric values are rejected before they reach the map.
+Supported parameters:
+- `lat` / `lon`
+- `latitude` / `longitude`
+- `lng` / `long`
 
----
+Invalid values (non-numeric, out-of-range, incomplete pairs) are rejected before reaching the map.
+
+PlacesLauncher constructs the URL and delegates execution to the OS.
+
+ 
 
 ## Running it
 
-**Wikipedia**
+### Wikipedia
 
 ```bash
 git clone https://github.com/wikimedia/wikipedia-ios.git
@@ -48,39 +79,53 @@ cp -r /path/to/this-repo/wikipedia-ios/WikipediaUnitTests/Code/* WikipediaUnitTe
 open Wikipedia.xcodeproj
 ```
 
-**PlacesLauncher**
-
-The `.xcodeproj` is committed — open it directly:
+### PlacesLauncher
 
 ```bash
 cd PlacesLauncher
 open PlacesLauncher.xcodeproj
 ```
 
-Run Wikipedia first so it registers the URL scheme, then run PlacesLauncher on the **same simulator**. Tap a location — Wikipedia should jump to Places at that coordinate.
+Run Wikipedia first (to register the URL scheme), then run PlacesLauncher on the same simulator.
 
-For a full walkthrough of the Wikipedia changes and the decisions behind them, see [`wikipedia-ios/ABN_ASSIGNMENT_README.md`](wikipedia-ios/ABN_ASSIGNMENT_README.md).
+ 
+## Architecture decisions
 
----
+PlacesLauncher follows a lightweight MVVM approach:
+
+- `@MainActor` ViewModels ensure UI thread safety  
+- Business logic lives in Services (pure Swift, testable)  
+- Parsing and validation are isolated from UI  
+- Async flows use `async/await` with `.task` cancellation  
+
+The Wikipedia app changes are intentionally minimal to reduce integration risk.
+
+ 
 
 ## Requirements
 
 | Requirement | Notes |
-|---|---|
-| Fetch locations from the JSON endpoint | `RemoteLocationsRepository` actor hits the single ABN AMRO endpoint with a 15 s / 30 s timeout and surfaces errors clearly. |
-| Tap a location → Wikipedia opens Places at that coordinate | `WikipediaDeepLinkBuilder` constructs the URL. Both cold-launch and background-resume paths work. |
-| Custom coordinate entry | `CoordinateParser` accepts comma as decimal separator (European keyboards) and validates range before opening. |
-| SwiftUI for the Places app | PlacesLauncher is pure SwiftUI — no UIKit, no storyboards. |
-| README | This file, plus `wikipedia-ios/ABN_ASSIGNMENT_README.md` with detailed technical notes. |
-| Unit tests | 16 PlacesLauncher tests (JSON decoding, deep link construction, coordinate parsing, ViewModel state, geocoding, error handling) and new Objective-C tests for the Wikipedia URL-parsing changes. |
-| Swift Concurrency | `@MainActor` ViewModel, `actor` repository, `async/await` throughout, `.task` for automatic cancellation on view disappear. |
-| Accessibility | `accessibilityLabel` and `accessibilityHint` on every interactive element. In-app settings panel for larger text, higher contrast, reduced motion, and VoiceOver coordinate reading — persisted with `@AppStorage`. |
+|||
+| Fetch locations | `RemoteLocationsRepository` actor with timeouts and explicit error handling |
+| Open Wikipedia on tap | `WikipediaDeepLinkBuilder` + lifecycle-safe routing |
+| Custom coordinates | `CoordinateParser` supports comma decimal separator and validates range |
+| SwiftUI | No UIKit or storyboards |
+| Unit tests | 16 PlacesLauncher tests + Wikipedia parsing tests |
+| Concurrency | `@MainActor`, `actor`, async/await |
+| Accessibility | Full support + persistent user settings |
 
----
-
+ 
 ## Tests
 
-**PlacesLauncher**
+### PlacesLauncher — 16 unit tests
+
+Covers:
+- JSON decoding  
+- deep link construction  
+- coordinate parsing  
+- ViewModel state  
+- geocoding success/failure  
+- error handling  
 
 ```bash
 cd PlacesLauncher
@@ -90,7 +135,15 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-**Wikipedia deep link parsing** (run from the full wikipedia-ios repo root)
+ 
+
+### Wikipedia — URL parsing tests
+
+Covers:
+- multiple parameter formats  
+- invalid values  
+- missing coordinate pairs  
+- negative and boundary values (±90 / ±180)  
 
 ```bash
 xcodebuild test \
@@ -100,12 +153,89 @@ xcodebuild test \
   -only-testing:WikipediaUnitTests/NSUserActivity_WMFExtensions_wmf_activityForWikipediaScheme_Test
 ```
 
----
+
+
+## Accessibility
+
+Every interactive element includes:
+
+- `accessibilityLabel`  
+- `accessibilityHint`  
+
+Coverage includes:
+- lists, buttons, inputs  
+- loading and error states  
+
+In-app settings:
+- larger text  
+- higher contrast  
+- reduced motion  
+- VoiceOver coordinate reading  
+
+All preferences persist via `@AppStorage`.
+
+
 
 ## Notable implementation details
 
-**Cold launch and background resume** — when Wikipedia is not running, `SceneDelegate` picks up the URL from `connectionOptions.urlContexts` and stores it until the UI is ready. When it is backgrounded, `scene(_:openURLContexts:)` fires directly. Both paths reach the same handler.
+### Cold launch vs background resume
 
-**The GPS race** — Places normally auto-centres on the user's position when it appears. `showCoordinate()` sets `panMapToNextLocationUpdate = false` before calling `performDefaultSearch`. Because this runs synchronously on the main thread, any GPS update that arrives before or after will return early without overriding the deep-linked coordinate.
+- Cold start → URL captured via `connectionOptions.urlContexts`  
+- Background → handled via `scene(_:openURLContexts:)`  
 
-**Coordinate validation** — validation runs at parse time in `wmf_placesActivityWithURL:` (before values enter `NSUserActivity.userInfo`) and again in `WMFPlacesDeepLinkCoordinator` before the map moves. Two independent layers, so a bug in one cannot silently display a wrong location.
+Both paths converge to a single handler, ensuring consistent behavior.
+
+
+
+### GPS override prevention
+
+Places normally auto-centers on the user’s location.
+
+This is explicitly disabled for deep links:
+
+- `panMapToNextLocationUpdate = false` is set before map updates  
+- guarantees GPS cannot override the requested coordinate  
+
+This behavior is deterministic by design.
+
+
+
+### Coordinate validation
+
+Validation happens in two independent layers:
+
+1. URL parsing (`NSUserActivity`)  
+2. UI coordination (`WMFPlacesDeepLinkCoordinator`)  
+
+This prevents invalid data from propagating silently.
+
+
+
+## Trade-offs
+
+- Chose MVVM over heavier architectures to keep scope focused  
+- Avoided persistence/caching to prevent over-engineering  
+- Limited changes to Wikipedia to reduce regression risk  
+- No UI tests due to time constraints (unit tests prioritized)  
+
+
+
+## How to evaluate this project
+
+Focus on:
+
+- deep link reliability across lifecycle states  
+- coordinate parsing robustness  
+- separation of concerns  
+- test coverage of edge cases  
+- accessibility completeness  
+
+
+
+## Final notes
+
+This implementation prioritizes:
+
+- correctness in deep link handling and coordinate validation  
+- clarity in architecture and separation of concerns  
+- minimal, safe integration with the existing Wikipedia codebase  
